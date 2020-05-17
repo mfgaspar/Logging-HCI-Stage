@@ -11,7 +11,6 @@ import com.hds.ensemble.sdk.model.Document;
 import com.hds.ensemble.sdk.model.DocumentBuilder;
 import com.hds.ensemble.sdk.model.DocumentFieldValue;
 import com.hds.ensemble.sdk.model.StreamingDocumentIterator;
-// import com.hds.ensemble.sdk.model.StringDocumentFieldValue;
 import com.hds.ensemble.sdk.plugin.CertificateProtocol;
 import com.hds.ensemble.sdk.plugin.PluginCallback;
 import com.hds.ensemble.sdk.plugin.PluginConfig;
@@ -29,7 +28,7 @@ import org.fluentd.logger.FluentLogger;
 
 public class Logging implements StagePlugin {
 
-    private FluentLogger LOG; // = FluentLogger.getLogger("test");
+    private FluentLogger LOG;
     private static final String PLUGIN_NAME = "org.github.meanify.hci.logging.stage";
     private static final String NAME = "Logging stage";
     private static final String DESCRIPTION = "Logging plugin stage ...";
@@ -66,6 +65,14 @@ public class Logging implements StagePlugin {
             .setUserVisibleName("Tag Prefix")
             .setUserVisibleDescription("Tag prefix for logging.");
 
+    public static final ConfigProperty.Builder LOGGING_TAG = new ConfigProperty.Builder()
+            .setName("org.github.meanify.hci.logging.stage.logging.tag")
+            .setValue("stage")
+            .setType(PropertyType.TEXT)
+            .setRequired(true)
+            .setUserVisibleName("Tag Prefix")
+            .setUserVisibleDescription("Tag prefix for logging.");
+
 
     private static List<ConfigProperty.Builder> groupProperties = new ArrayList<>();
 
@@ -73,6 +80,7 @@ public class Logging implements StagePlugin {
         groupProperties.add(LOGGING_HOST);
         groupProperties.add(LOGGING_PORT);
         groupProperties.add(LOGGING_TAG_PREFIX);
+        groupProperties.add(LOGGING_TAG);
     }
     public static final ConfigPropertyGroup.Builder LOGGING_CONFIG = new ConfigPropertyGroup.Builder(
             "Group One", null)
@@ -92,9 +100,9 @@ public class Logging implements StagePlugin {
         this.config = pluginConfig;
         this.callback = pluginCallback;
         validateConfig(config);
-        String logging_host = this.config.getProperty("org.github.meanify.hci.logging.stage.logging.host").getValue();
-        int logging_port = Integer.parseInt(this.config.getProperty("org.github.meanify.hci.logging.stage.logging.port").getValue());
-        String logging_tag = this.config.getProperty("org.github.meanify.hci.logging.stage.logging.tag").getValue();
+        String logging_host = this.config.getPropertyValue(LOGGING_HOST.getName());
+        int logging_port = Integer.parseInt(this.config.getPropertyValue(LOGGING_PORT.getName()));
+        String logging_tag = this.config.getPropertyValue(LOGGING_TAG_PREFIX.getName());;
         LOG = FluentLogger.getLogger(logging_tag, logging_host, logging_port);
     }
 
@@ -171,6 +179,7 @@ public class Logging implements StagePlugin {
     @Override
     public Iterator<Document> process(PluginSession pluginSession, Document inputDocument) throws ConfigurationException, PluginOperationFailedException {
         final DocumentBuilder docBuilder = callback.documentBuilder().copy(inputDocument);
+        String logging_tag = this.config.getPropertyValue(LOGGING_TAG.getName());;
         try {
             Map<String, Object> logMessage = new HashMap<String, Object>();
             logMessage.put("messageType", "document");
@@ -178,12 +187,13 @@ public class Logging implements StagePlugin {
             for (Map.Entry<String, DocumentFieldValue<?>> entry : metadata.entrySet()) {
                 logMessage.put(entry.getKey(), entry.getValue().getFirstRawValue());
             }
-            LOG.log("stage", logMessage);
+            LOG.log(logging_tag, logMessage);
         } catch (Exception e) {
             String errorMessage = e.getMessage();
-            Map<String, Object> data = new HashMap<String, Object>();
-            data.put("messageType", "error");
-            data.put("message", errorMessage);
+            Map<String, Object> logMessage = new HashMap<String, Object>();
+            logMessage.put("messageType", "error");
+            logMessage.put("message", errorMessage);
+            LOG.log(logging_tag, logMessage);
             if(e.getCause()!=null){
                 throw new PluginOperationFailedException(errorMessage,e.getCause());
             }else{
