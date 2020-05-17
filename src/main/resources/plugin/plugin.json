@@ -1,0 +1,13 @@
+{
+    "bundleName": "org.github.meanify.hci.logging",
+    "description": "Logging Stage Plugins",
+    "displayName": "Logging Plugins",
+    "plugins": [
+        {
+            "pluginImplementation": "org.github.meanify.hci.logging.stage.Logging",
+            "pluginName": "org.github.meanify.hci.logging.stage",
+            "pluginType": "com.hds.ensemble.sdk.stage.StagePlugin"
+        }
+    ],
+    "version": "1.6.0"
+}
